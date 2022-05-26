@@ -1,0 +1,226 @@
+<style>
+  .SearchSummary--start {display: none}
+  .QueryBuilder--selectedItem,
+  .QueryBuilder--selectedItem:after,
+  .QueryBuilder--selectedItem:hover,
+  .QueryBuilder--selectedItem:focus{
+    background-color:transparent!important;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 2px;
+    display: inline-block;
+    margin: 1rem;
+    position: relative;
+    width: 300px;
+    cursor:pointer
+  }
+  .card:hover {
+    box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+  }
+  .page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 44px 0px 130px 0px;
+  }
+  .header {
+    margin-top: 0px;
+  }
+</style>
+<ol class="page-breadcrumb">
+  <li>
+    <mp-link title="Home" url="/">Home</mp-link>
+  </li>
+  <li><semantic-link title="Assets" iri='[[resolvePrefix "Assets:"]]'>Assets</semantic-link></li>
+  <li class="active">PLM Dashboard</li>
+</ol>
+<h2 class="header">PLM Dashboard</h2>
+<div class="page">
+  <div>
+    <img src="../assets/pythia.png" width="204px" style="margin: -2px">
+    <div style="margin-bottom:5vh;"></div>
+  </div>
+  <div style="width:700px;margin: 0 auto;" class="text-centered">
+    <div class='search-card'>
+      <div class='panel-header'>
+        <bs-tabs id='searchTabs'>
+          <bs-tab event-key='instanceSearch' title='Project Information Search'>
+            <semantic-search search-profile='{
+              "categories": [{
+                "iri": "<http://www.siemens.com/gp-tp/ontology/PartSet>",
+                "label": "PartSet"
+                },
+                {
+                  "iri": "<http://www.siemens.com/gp-tp/ontology/ModuleVariant>",
+                  "label": "ModuleVariant"
+                },
+                {
+                  "iri": "<http://www.siemens.com/gp-tp/ontology/Module>",
+                  "label": "Module"
+                }],
+              "relations": []
+            }'>
+            <semantic-search-query-keyword placeholder='Search for Project number, Project name ...'
+            query='
+            PREFIX Repository: <http://www.metaphacts.com/ontologies/repository#>
+            PREFIX lookup: <http://www.metaphacts.com/ontologies/platform/repository/lookup#>
+            PREFIX owl: <http://www.w3.org/2002/07/owl#>
+            PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            SELECT DISTINCT ?subject ?type
+            WHERE {
+              #1 find all classes defined in any of the "relevant" ontologies defined below
+              ?type rdf:type owl:Class ;
+                    rdfs:isDefinedBy ?domainOntology .
+              FILTER(?domainOntology IN (
+                #<http://infohub.siemens-energy.com/energy/transmission/basic-switchgear-ontology/basic-switchgear-ontology/domain>,
+                #<http://infohub.siemens-energy.com/energy/transmission/basic-switchgear-ontology/basic-switchgear-ontology/domain-shacl>,
+                #<http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain>,
+                #<http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain-shacl>,
+                #<http://infohub.siemens-energy.com/energy/transmission/8dn8-5-switchgear-ontology/domain>,
+                #<http://infohub.siemens-energy.com/energy/transmission/8dn8-5-switchgear-ontology/domain-shacl>,
+                #<http://infohub.siemens-energy.com/energy/transmission/8dn9-2-switchgear-ontology/domain>,
+                #<http://infohub.siemens-energy.com/energy/transmission/8dn9-2-switchgear-ontology/domain-shacl>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/domain>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/domain-shacl>,
+                <http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain>,
+                <http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain-shacl>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn8-5-switchgear-ontology/domain>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn8-5-switchgear-ontology/domain-shacl>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn9-2-switchgear/domain>,
+                <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn9-2-switchgear/domain-shacl>
+              ) )
+              #2 find instances of selected classes
+              ?subject rdf:type ?type  .
+               
+              #2 Filter by user input
+              SERVICE Repository:lookup {
+                ?subject lookup:token ?__token__ ;
+                       lookup:limit 1000000000 .
+              }
+            }
+            '>
+            </semantic-search-query-keyword>
+            <semantic-search-result-holder>
+              <semantic-search-result>
+                <semantic-table id='table-result'
+                query='SELECT DISTINCT ?subject ?type WHERE { }'
+                options='{"showFilter": false, "resultsPerPage":10, "showTableHeading": true}'
+                no-result-template='Sorry, there exists no project data that is matching your search!'
+                column-configuration='[
+                  {
+                    "variableName": "subject",
+                    "displayName": "Instance" 
+                  },
+                  {
+                    "variableName": "type",
+                    "displayName": "Class",
+                    "showFilter": true
+                  }]'>
+                </semantic-table>
+              </semantic-search-result>
+            </semantic-search-result-holder>
+            </semantic-search>
+          </bs-tab>
+          <bs-tab event-key='classSearch' title='Class Search'>
+            <semantic-search search-profile='{
+              "categories": [{
+                "iri": "<http://www.siemens.com/gp-tp/ontology/PartSet>",
+                "label": "PartSet"
+                },
+                {
+                  "iri": "<http://www.siemens.com/gp-tp/ontology/ModuleVariant>",
+                  "label": "ModuleVariant"
+                },
+                {
+                  "iri": "<http://www.siemens.com/gp-tp/ontology/Module>",
+                  "label": "Module"
+                }],
+              "relations": []
+            }'>
+            <semantic-search-query-keyword
+              placeholder='Search for Modules, Switchgears or Flanges using class names (e.g. Switchgear)...' 
+              query='
+                PREFIX owl: <http://www.w3.org/2002/07/owl#>
+                PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+                PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+                PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                SELECT DISTINCT ?type ?description
+                  WHERE {
+                    #1 find all classes defined in any of the "relevant" ontologies defined below
+                    ?type rdf:type owl:Class ;
+                          rdfs:isDefinedBy ?domainOntology .
+                    FILTER(?domainOntology IN (
+                      #<http://infohub.siemens-energy.com/energy/transmission/basic-switchgear-ontology/basic-switchgear-ontology/domain>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/basic-switchgear-ontology/basic-switchgear-ontology/domain-shacl>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain-shacl>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/8dn8-5-switchgear-ontology/domain>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/8dn8-5-switchgear-ontology/domain-shacl>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/8dn9-2-switchgear-ontology/domain>,
+                      #<http://infohub.siemens-energy.com/energy/transmission/8dn9-2-switchgear-ontology/domain-shacl>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/domain>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/domain-shacl>,
+                      <http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain>,
+                      <http://infohub.siemens-energy.com/energy/transmission/siemens-energy-switchgear-manufacturer/domain-shacl>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn8-5-switchgear-ontology/domain>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn8-5-switchgear-ontology/domain-shacl>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn9-2-switchgear/domain>,
+                      <http://infohub.siemens-energy.com/energy/transmission/switchgear/manufacturer/8dn9-2-switchgear/domain-shacl>
+                    ))
+                    #2 Filter by user input
+                    ?type rdfs:label ?typeLabel .
+                    FILTER( REGEX(STR(?typeLabel), ?__token__, "i") )
+                    OPTIONAL { ?type skos:definition ?description }
+                  }
+                '
+            >
+            </semantic-search-query-keyword>
+            <semantic-search-result-holder>
+              <semantic-search-result>
+                <semantic-table id='table-result'
+                  query='SELECT DISTINCT ?type ?description WHERE { }'
+                  options='{
+                              "showFilter":false, 
+                              "resultsPerPage":10, 
+                              "showTableHeading": true,
+                              "enableGrouping": false,
+                              "groupingOptions": {
+                                                  "groupedBy": ["type"], 
+                                                  "showOnlyAggregatedValue": true
+                                                }
+                          }'
+                  no-result-template='Sorry, there is no class within the ontologies that is matching your search!'
+                  column-configuration='[
+                    {
+                      "variableName": "type",
+                      "displayName": "Class"
+                    },
+                    {
+                      "variableName": "description",
+                      "displayName": "Description",
+                      "aggregationCellTemplate": "{{> aggregationTemplate }}"
+                    }
+                    ]'>
+                    <template id='aggregationTemplate'>
+                        {{#each rows}}
+                          {{#if (cond-not @last)}}
+                            <div style='margin-bottom: 1.5vw;'>{{description.value}}</div>
+                          {{else}}
+                            <div>{{description.value}}</div>
+                          {{/if}}
+                        {{/each}}
+                    </template>
+                </semantic-table>
+              </semantic-search-result>
+            </semantic-search-result-holder>            
+            </semantic-search>
+          </bs-tab>
+        </bs-tabs>
+      </div>
+    </div>
+  </div>
+</div>

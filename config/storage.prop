@@ -1,0 +1,5 @@
+assetStorage.type=git
+assetStorage.mutable=true
+assetStorage.localPath=/storage/git-runtime-data 
+assetStorage.branch=main
+#assetStorage.remoteUrl=https://github.com/SalmaLoussaief/DaimlerApp.git

@@ -1,0 +1,919 @@
+<mp-event-target-template-render
+  id='edit-costlist-details'
+  template='{{> edit-costlist-details-template}}'
+>
+  <template id='edit-costlist-details-template'>
+ 
+ <div id="edit-costlist-info">
+   <div class="info-table">
+     <h3>Material Information</h3>
+    <semantic-table query='
+      PREFIX : <http://www.siemens.com/si-cpq#>
+      
+      SELECT ?orderNumber ?finalshortText ?region ?costlist WHERE{
+        BIND( "{{page-urlParam "orderNumber"}}" as ?orderNumber)
+        BIND( "{{page-urlParam "costlistName"}}" as ?costlist)
+        
+        BIND(IRI(REPLACE(STR(?__useruri__),"%40","@")) AS ?emailURI)
+        ?emailURI :hasCurrentSelectedRegion ?region .
+        
+        GRAPH <http://www.siemens.com/si-cpq/data/named-graph/current-base-information> {
+          ?materialIRI a :Material ;
+          :materialNumber "{{page-urlParam "orderNumber"}}".
+
+          OPTIONAL {
+            ?materialIRI :hasShortText ?shortTextIRI .
+            ?shortTextIRI a :ShortText,:ReworkedText ;
+                        :textLanguageISO ?lang ;
+                        :textContent ?shortText .
+            FILTER(UCASE(?lang) = "EN" )
+          }
+          OPTIONAL {
+            ?materialIRI :hasShortText ?shortIRI .
+            ?shortIRI a :ShortText .
+            FILTER NOT EXISTS { ?shortIRI a :ReworkedText.}
+            ?shortIRI :textLanguageISO ?lang .
+            ?shortIRI :textContent ?short .
+            FILTER(UCASE(?lang) = "EN" )     
+          }
+          BIND(IF(BOUND(?short),?short, "") AS ?shortTextValueIntermediate)
+          BIND(IF(BOUND(?shortText),?shortText, ?shortTextValueIntermediate) AS ?finalshortText)
+        }
+      }'
+      options='{"showFilter": false, "pageSizeSelection":false}'
+      column-configuration='[
+        {"variableName": "orderNumber", "displayName": "Order Number"},
+        {"variableName": "finalshortText","displayName": "Short Text"},
+        {"variableName": "region","displayName": "Region Name"},
+        {"variableName": "costlist","displayName": "Cost List"}
+      ]'  
+    ></semantic-table>
+   </div>
+<div class="info-table">
+     <h3>Cost List Information</h3>
+ <semantic-form
+  subject='http://www.siemens.com/si-cpq/data/material-{{page-urlParam "orderNumber"}}'
+  class="semantic-form--align-footer-right"
+  post-action='event'
+  id="update-costlist"
+  browser-persistence="false"
+  validate-after-load='true'
+  persistence='{
+    "type": "client-side-sparql"
+  }'
+  fields='[
+  {
+    "id": "costGroup",
+    "label": "Cost Group",
+    "minOccurs": 1,
+    "maxOccurs":1,
+    "selectPattern": "SELECT ?value WHERE { BIND ( \"{{page-urlParam \"costgroup\"}}\" as ?value) }",
+    "valueSetPattern": "
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX : <http://www.siemens.com/si-cpq#>
+      Select distinct $label $value
+      FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+      FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+      FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+      FROM <http://www.siemens.com/si-cpq/data/named-graph/current-selected-regions>
+      where
+      {
+        BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+        ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+        ?regionIRI rdfs:label ?currentSelectedRegion .
+
+        ?transferFactorIRI a :TransferFactor;
+        :isForCostList ?costListIRI ;
+        :isForSalesRegion ?regionIRI .
+        
+        ?regionIRI a :SalesRegion.
+        
+        ?costListIRI a :CostList .
+        
+        $value :isForCostList ?costListIRI;
+                      a :CostGroup ;
+                      rdfs:label $label .
+      }",
+      "deletePattern": "
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX : <http://www.siemens.com/si-cpq#>
+      DELETE{
+      GRAPH <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>{
+
+       $subject :isAssignedToCostGroup ?costGroupsIRI ;
+       rdfs:label \"{{page-urlParam \"costgroup\"}}\".
+
+
+      }}WHERE{
+        BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+        ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+        ?regionIRI a :SalesRegion;
+                  rdfs:label ?currentSelectedRegion .
+
+        $subject a :Material ;
+        :isAssignedToCostGroup ?costGroupsIRI .
+
+        ?costGroupsIRI a :CostGroup ;
+        rdfs:label \"{{page-urlParam \"costgroup\"}}\" ;
+        :isForSalesRegion ?regionIRI .
+        
+      }
+      ",
+      "insertPattern": "
+      PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+      PREFIX : <http://www.siemens.com/si-cpq#>
+      INSERT{
+      GRAPH <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>{
+       $subject :isAssignedToCostGroup $value .
+      }}
+      
+      WHERE{
+     
+      }
+      " 
+  },
+  {
+    "id": "agreement",
+    "label": "Agreement",
+    "minOccurs": 0,
+    "maxOccurs":1
+  },
+  {
+  "id": "switch-action-type",
+  "maxOccurs":1,
+  "minOccurs": 1
+}
+]'
+>
+
+
+
+  {{#if editMode}}
+  
+  <semantic-form-select-input for="costGroup" ></semantic-form-select-input>
+  <semantic-form-text-input for="agreement"></semantic-form-text-input>
+
+  {{else}}
+          
+  <div class="disabled-field">
+  <semantic-form-select-input for="costGroup" ></semantic-form-select-input>
+  <semantic-form-text-input for="agreement"></semantic-form-text-input>
+
+  </div>
+  {{/if}}
+
+  <div id="composite-input">
+  <semantic-form-switch for="switch-action-type" switch-on-field="switch-case-type" >
+    <semantic-form-switch-case label="Using Transfer Price">
+        <semantic-form-composite-input
+          for="switch-action-type"
+          default-edit-subject="true"
+          fields='[
+                {
+                  "id": "switch-case-type"
+                },
+               {
+                  "id": "transferFactor",
+                  "label": "Transfer Factor",
+                  "minOccurs": 1,
+                  "maxOccurs": 1,
+                  "selectPattern": "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-selected-regions>
+                    where
+                    {
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" .
+
+                   ?material   :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue $value .
+          
+                  }  
+                ",
+                "deletePattern": "
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                  PREFIX : <http://www.siemens.com/si-cpq#>
+                  DELETE{
+                  GRAPH <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferFactorIRI :factorValue ?fv .
+                  }
+                  }WHERE{
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?fv .
+                                  
+                  }
+                ",
+                "insertPattern": "
+                PREFIX : <http://www.siemens.com/si-cpq#>
+                INSERT{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferFactorIRI :factorValue $value . 
+                  }
+                }WHERE{
+                    BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI .
+                } "
+                },
+                {
+                  "id": "transferPrice",
+                  "label": "Transfer Price",
+                  "minOccurs": 1,
+                  "maxOccurs": 1,
+                   "selectPattern": "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-selected-regions>
+                    where
+                    {
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                            
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode ?currency ;
+                                :priceValue ?netlistPrice .
+
+                      ?costListIRI a :CostList ;
+                          rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+        
+    ?material     :hasTransferFactor ?transferFactorIRI .
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?transferFactor .
+  
+        ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI;
+                                        :priceValue $value.
+                     }",
+                "deletePattern": "
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                  PREFIX : <http://www.siemens.com/si-cpq#>
+                  DELETE{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferPriceIRI :priceValue ?transferPriceValue .
+                  }
+                  }WHERE{
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?fv .
+
+                      ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI;
+                                        :priceValue ?transferPriceValue.
+                                  
+                  }
+                ",
+                "insertPattern": "
+                PREFIX : <http://www.siemens.com/si-cpq#>
+                INSERT{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferPriceIRI :priceValue $value .
+
+                  }
+                }WHERE{
+                    BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode ?currency ;
+                                :priceValue ?netlistPrice .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI .
+
+                    ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI .
+                } "
+                },{
+                  "id":"transferPriceCurrency",
+                  "minOccurs": 1,
+                  "maxOccurs":1,
+                  "selectPattern": "PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    where
+                    {
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode $value .
+                  }"
+                },
+                   {
+                  "id":"netListPrice",
+                   "label": "Net List Price",
+
+                  "minOccurs": 1,
+                  "maxOccurs":1,
+                  "selectPattern": "PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    where
+                    {
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :priceValue $value .
+                  }"
+              
+              
+                }
+              ]'
+          
+
+                              
+                 field-dependencies='[
+            {
+              "field": "transferFactor",
+
+              "dependencies": {
+                "transferPrice": "transferPrice",
+                "netListPrice":"netListPrice"
+              },
+           
+                "valueSetPattern": "
+      SELECT ?value ?label WHERE {
+      BIND ( IF ( ?netListPrice !=0.0,xsd:float(xsd:float(?transferPrice)/?netListPrice), 0.0) AS ?value )
+      BIND ( IF ( ?netListPrice !=0.0,xsd:float(xsd:float(?transferPrice)/?netListPrice), 0.0) AS ?label )
+
+                }
+              "  
+            }
+
+
+        ]'
+
+                field-constraints='[
+            {
+              "validatePattern": "ASK {  FILTER (IF(?netListPrice=0.0,?transferFactor=0.0,xsd:float(?transferFactor)=xsd:float(xsd:float(?transferPrice)/?netListPrice)))}",
+              "message": "Please update transfer factor with the new value from the dropdown.",
+              "fields": {
+                "transferFactor": "transferFactor",
+                "transferPrice": "transferPrice",
+                "netListPrice":"netListPrice"
+              }
+            }
+        ]'
+        >
+          <semantic-form-hidden-input
+            for="switch-case-type"
+            default-value="http://example.com/transferPriceAvailable/false"
+          >
+          </semantic-form-hidden-input>
+
+
+          <!-- <semantic-form-text-input for="transferFactor"></semantic-form-text-input> -->
+<!--  -->
+<div class="disabled-field">
+          <semantic-form-text-input for="netListPrice"></semantic-form-text-input>
+</div>
+
+          <div class="price-currency-layout">
+            <div class="price-input">
+
+              {{#if editMode}}
+                <semantic-form-text-input for="transferPrice"></semantic-form-text-input>
+                {{else}}
+                <div class="disabled-field">
+                <semantic-form-text-input for="transferPrice"></semantic-form-text-input>
+                </div>
+                {{/if}}
+            </div>
+            
+            <div class="currency-input">
+              <div class="disabled-field">
+                <semantic-form-text-input for="transferPriceCurrency"></semantic-form-text-input>
+              </div>
+          </div>
+          </div>
+                    
+                    
+                {{#if editMode}}
+                <semantic-form-select-input for="transferFactor"></semantic-form-select-input>
+                {{else}}
+                <div class="disabled-field">
+                <semantic-form-select-input for="transferFactor"></semantic-form-select-input>
+                </div>
+                {{/if}}
+
+<!--  -->
+
+        </semantic-form-composite-input>
+      </semantic-form-switch-case>
+      <semantic-form-switch-case label="Using Transfer Factor">
+        <semantic-form-composite-input
+          for="switch-action-type"
+                    default-edit-subject="true"
+
+          fields='[
+                {
+                  "id": "switch-case-type"
+                },
+                                {
+                  "id": "transferFactor",
+                  "label": "Transfer Factor",
+                  "minOccurs": 1,
+                  "maxOccurs": 1,
+                  "selectPattern": "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-selected-regions>
+                    where
+                    {
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" .
+
+                   ?material   :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue $value .
+          
+                  }  
+                ",
+                "deletePattern": "
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                  PREFIX : <http://www.siemens.com/si-cpq#>
+                  DELETE{
+                  GRAPH <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferFactorIRI :factorValue ?fv .
+                  }
+                  }WHERE{
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?fv .
+                                  
+                  }
+                ",
+                "insertPattern": "
+                PREFIX : <http://www.siemens.com/si-cpq#>
+                INSERT{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferFactorIRI :factorValue $value . 
+                  }
+                }WHERE{
+                    BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI .
+                } "
+                },
+                {
+                  "id": "transferPrice",
+                  "label": "Transfer Price",
+                  "minOccurs": 1,
+                  "maxOccurs": 1,
+                   "selectPattern": "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                    PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-selected-regions>
+                    where
+                    {
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                            
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode ?currency ;
+                                :priceValue ?netlistPrice .
+
+                      ?costListIRI a :CostList ;
+                          rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+        
+    ?material     :hasTransferFactor ?transferFactorIRI .
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?transferFactor .
+  
+        ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI;
+                                        :priceValue $value.
+                     }",
+                "deletePattern": "
+                  PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                  PREFIX : <http://www.siemens.com/si-cpq#>
+                  DELETE{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferPriceIRI :priceValue ?transferPriceValue .
+                  }
+                  }WHERE{
+                      BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+                      
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI ;
+                                :factorValue ?fv .
+
+                      ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI;
+                                        :priceValue ?transferPriceValue.
+                                  
+                  }
+                ",
+                "insertPattern": "
+                PREFIX : <http://www.siemens.com/si-cpq#>
+                INSERT{
+                  GRAPH<http://www.siemens.com/si-cpq/data/named-graph/current-region-information>{
+                    ?transferPriceIRI :priceValue $value .
+
+                  }
+                }WHERE{
+                    BIND(IRI(REPLACE(STR(?__useruri__),\"%40\",\"@\")) AS ?emailURI)
+                      ?emailURI :hasCurrentSelectedRegion ?currentSelectedRegion .
+                      ?regionIRI a :SalesRegion;
+                                rdfs:label ?currentSelectedRegion .
+                    
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasTransferFactor ?transferFactorIRI ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode ?currency ;
+                                :priceValue ?netlistPrice .
+
+                      ?costListIRI a :CostList ;
+                                rdfs:label \"{{page-urlParam \"costlistName\"}}\".
+
+                      ?transferFactorIRI a :TransferFactor;
+                                :isForCostList ?costListIRI ;
+                                :isForSalesRegion ?regionIRI .
+
+                    ?transferPriceIRI :isCalculatedBasedOn ?transferFactorIRI .
+                } "
+                },{
+                  "id":"transferPriceCurrency",
+                  "minOccurs": 1,
+                  "maxOccurs":1,
+                  "selectPattern": "PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    where
+                    {
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :currencyCode $value .
+                  }"
+                },
+                   {
+                  "id":"netListPrice",
+                   "label": "Net List Price",
+
+                  "minOccurs": 1,
+                  "maxOccurs":1,
+                  "selectPattern": "PREFIX : <http://www.siemens.com/si-cpq#>
+                    Select distinct $value
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-base-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-region-information>
+                    FROM <http://www.siemens.com/si-cpq/data/named-graph/current-application-information>
+                    where
+                    {
+                      ?material a :Material ;
+                                :materialNumber \"{{page-urlParam \"orderNumber\"}}\" ;
+                                :hasNetListPrice ?priceIRI .
+
+                      ?priceIRI :priceValue $value .
+                  }"
+              
+              
+                }
+              ]'
+          
+              
+                        
+            field-dependencies='[
+            {
+              "field": "transferPrice",
+              "dependencies": {
+                "transferFactor": "transferFactor",
+                "netListPrice":"netListPrice"
+              },
+           
+                "valueSetPattern": "
+                SELECT ?value ?label WHERE {
+                       BIND (xsd:float(?transferFactor)*xsd:float(?netListPrice) as ?value)
+                       BIND (xsd:float(?transferFactor)*xsd:float(?netListPrice) as ?label)
+                }
+              "  
+            }
+
+
+        ]'
+
+                   field-constraints='[
+            {
+              "validatePattern": "ASK { FILTER(xsd:float(?transferPrice)=(xsd:float(?transferFactor)*xsd:float(?netListPrice))) }",
+              "message": "Please update transfer price with the new value from the dropdown.",
+              "fields": {
+                "transferFactor": "transferFactor",
+                "transferPrice": "transferPrice",
+                "netListPrice":"netListPrice"
+              }
+            }
+        ]'
+        >
+          <semantic-form-hidden-input for="switch-case-type" default-value="http://example.com/transferPriceAvailable/true">
+          </semantic-form-hidden-input>
+
+          <div class="disabled-field">
+          <semantic-form-text-input for="netListPrice"></semantic-form-text-input>
+          </div>
+
+         {{#if editMode}}
+          <semantic-form-text-input for="transferFactor"></semantic-form-text-input>
+         {{else}}
+          
+          <div class="disabled-field">
+          <semantic-form-text-input for="transferFactor"></semantic-form-text-input>
+          </div>
+          {{/if}}
+
+          <div class="price-currency-layout">
+            <div class="price-input">
+               
+
+
+              {{#if editMode}}
+                <semantic-form-select-input for="transferPrice"></semantic-form-select-input>
+                {{else}}
+                <div class="disabled-field">
+                <semantic-form-text-input for="transferPrice"></semantic-form-text-input>
+                </div>
+                {{/if}}
+
+            </div>
+
+            <div class="currency-input">
+              <div class="disabled-field">
+                <semantic-form-text-input for="transferPriceCurrency"></semantic-form-text-input>
+              </div>
+          </div>
+
+          </div>
+        </semantic-form-composite-input>
+      </semantic-form-switch-case>
+    </semantic-form-switch>
+  </div>
+  <div class="semantic-form-footer-buttons">
+
+
+
+
+
+{{#if editMode}}
+    <button name="reset" class="btn btn-info">Reset</button>
+   
+   
+  
+    <button name="submit" class="btn btn-success">Save</button> 
+
+
+
+     
+
+{{else}}
+            <mp-event-trigger
+                type="Component.TemplateUpdate"
+                targets='["edit-costlist-details"]'
+                data='{"editMode": true}'
+              >
+                <button class="btn btn-success view-manpower-material-btn">Edit</button>
+              </mp-event-trigger>
+
+         
+
+
+  </div>  
+
+</semantic-form> 
+
+
+
+     
+          
+
+
+</div>
+</div>
+
+  </template>
+ </mp-event-target-template-render>
+ 
+<style>
+  #edit-costlist-info{
+    padding: 25px;
+  }
+
+  .info-table{
+    padding: 20px;
+    border: 1px solid ;
+    margin-bottom: 20px;
+  }
+  .disabled-field .select-text-field__select {
+    pointer-events: none;
+  }
+
+  .disabled-field .Select__control {
+    background-color: #eee;
+    border: 1px solid grey;
+  }
+
+  .disabled-field input[type="text"] {
+    pointer-events: none;
+    border: 1px solid grey;
+    background-color: #eee;
+  }
+
+  .info-table .semantic-form-input-decorator--with-header {
+    margin: 10px 0;
+    /* display: flex; */
+    align-items: center;
+  }
+
+  .info-table .semantic-form-input-decorator--with-header {
+    display: flex;
+    margin: 18px 0;
+  }
+
+  .info-table .semantic-form-input-decorator__header {
+    min-width: 165px;
+    max-width: 165xpx;
+    padding-right: 20px;
+    margin-bottom: 0;
+    padding-left: 10px;
+  }
+
+  .info-table .cardinality-support {
+    min-width: 55%;
+    width: 100%;
+  }
+
+  .info-table .semantic-form-validation-messages {
+    margin-left: 10px;
+  }
+
+  .info-table .price-currency-layout .semantic-form-input-decorator--with-header {
+    margin-top: 0;
+  }
+
+  .price-currency-layout {
+    display: inline-flex;
+    margin-bottom: 20px;
+  }
+
+  #composite-input .semantic-form-input-decorator--with-header{
+    display: block;
+  }
+
+  .info-table .price-currency-layout {
+    width: 100%;
+    margin: 20px 0;
+  }
+
+  .price-input {
+    padding-right: 20px;
+    width: 100%;
+  }
+
+  .currency-input{
+    display: inline-flex;
+    align-items: end;
+  }
+
+  
+
+</style>

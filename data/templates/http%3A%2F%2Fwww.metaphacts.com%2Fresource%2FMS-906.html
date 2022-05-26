@@ -1,0 +1,74 @@
+<div style="border: 1px solid #80808026; height:  350px">
+  <ontodia query="
+    prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    prefix person: <http://example.com/person/>
+    prefix org: <http://example.com/org/>
+    prefix foaf: <http://xmlns.com/foaf/0.1/>
+
+    CONSTRUCT {
+      ?s ?p ?o
+    } WHERE {
+      {
+        SELECT ?s ?p ?o WHERE {
+          VALUES (?s ?p ?o)
+          {
+            (person:alice foaf:knows person:bob)
+            (person:alice foaf:knows person:carol)
+            (person:carol foaf:knows person:mike)
+            (person:mike foaf:knows person:carol)
+
+          }
+        }
+      }
+    }
+  ">
+    <ontodia-data-providers>
+      <ontodia-rdf-provider provision-query='
+        prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        prefix person: <http://example.com/person/>
+        prefix org: <http://example.com/org/>
+        prefix foaf: <http://xmlns.com/foaf/0.1/>
+
+        CONSTRUCT {
+          ?s ?p ?o
+        } WHERE {
+          {
+            SELECT ?s ?p ?o WHERE {
+              VALUES (?s ?p ?o)
+              {
+            (person:alice foaf:knows person:bob)
+            (person:alice foaf:knows person:carol)
+            (person:carol foaf:knows person:mike)
+            (person:mike foaf:knows person:carol)
+              }
+            }
+          }
+        }
+      '>
+      </ontodia-rdf-provider>
+    </ontodia-data-providers>
+
+    <ontodia-canvas id="canvas-demo5"
+    layout-settings='{
+    "layout": {
+        "type": "sankey",
+        "axis": "y",
+        "step": 50,
+        "transformLinks": {
+            "directLinks": [
+                ...
+            ],
+            "invertLinks": [
+                ...
+            ],
+            "removeOtherLinks": true,
+            "collapseMultiple": true
+        }
+    }
+}'
+      
+    ></ontodia-canvas>
+  </ontodia>
+</div>

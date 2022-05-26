@@ -1,0 +1,20 @@
+<semantic-form-switch for="general-switch-type" switch-on-field="switch-case-type">
+    <semantic-form-switch-case label="case label 1">
+      <semantic-form-composite-input for="general-switch-type" new-subject-template="template" fields="[
+          ...
+        ]">
+        <semantic-form-hidden-input for="switch-case-type" default-value="http://www.example.com/spec-type-1">
+        </semantic-form-hidden-input>
+        ... child inputs ...
+      </semantic-form-composite-input>
+    </semantic-form-switch-case>
+    <semantic-form-switch-case label="case label 2">
+      <semantic-form-composite-input for="general-switch-type" new-subject-template="template" fields="[
+          ...
+        ]">
+        <semantic-form-hidden-input for="switch-case-type" default-value="http://www.example.com/spec-type-2">
+        </semantic-form-hidden-input>
+          ... another child inputs ...
+        </semantic-form-composite-input>
+      </semantic-form-switch-case>
+</semantic-form-switch>

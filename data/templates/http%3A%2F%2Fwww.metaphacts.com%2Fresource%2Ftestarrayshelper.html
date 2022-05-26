@@ -1,0 +1,25 @@
+<semantic-query
+  query='SELECT ?code ?count ?active WHERE {
+    VALUES (?code ?count ?active) {
+      ("delta" 42 true)
+      ("beta" 10 false)
+      ("omicron" -2 true)
+    }
+  }'
+  template='{{> t}}'>
+  <template id='t'>
+  
+  {{log (array-reverse bindings)}}
+
+
+  {{log (array-sort bindings (func b (number-of b.count.value)))}}
+
+  {{log (array-select bindings (func b b.code.value)}}
+
+  {{log (array-filter bindings (func b (cond-eq b.active.value "true")))}}
+
+  {{log (array-filter bindings (func b (cond-neq b.active.value "true")))}}
+
+  
+  </template>
+</semantic-query>
